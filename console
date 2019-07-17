@@ -1,0 +1,36 @@
+#!/usr/bin/env php
+<?php
+
+use Dotenv\Dotenv;
+use Core\Config\Config;
+use Core\Console\Application;
+use Zend\ServiceManager\ServiceManager;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\Console\Helper\EntityManagerHelper;
+use Doctrine\Migrations\Tools\Console\Helper\ConfigurationHelper;
+
+require 'vendor/autoload.php';
+require 'core/Support/helpers.php';
+
+Dotenv::create(base_path())->load();
+
+$config = Config::make(config_path());
+$container = new ServiceManager($config['dependencies']);
+
+/** @var Application $cli */
+$cli = $container->get(Application::class);
+
+/** @var EntityManagerInterface $em */
+$em = $container->get(EntityManagerInterface::class);
+$connection = $em->getConnection();
+
+$configuration = new Doctrine\Migrations\Configuration\Configuration($connection);
+$configuration->setMigrationsDirectory(base_path('database/migrations'));
+$configuration->setMigrationsNamespace('Migration');
+
+$cli->getHelperSet()->set(new EntityManagerHelper($em), 'em');
+$cli->getHelperSet()->set(new ConfigurationHelper($connection, $configuration), 'configuration');
+
+//Doctrine\ORM\Tools\Console\ConsoleRunner::addCommands($cli);
+
+$cli->run();
